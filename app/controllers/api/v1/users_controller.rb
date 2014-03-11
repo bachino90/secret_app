@@ -1,4 +1,5 @@
-class API::V1::UsersController < ApplicationController
+class API::V1::UsersController < API::V1::ApiController
+  skip_before_filter :api_session_token_authenticate!, only: [:create]
   before_action :set_user, only: [:show, :edit, :update, :destroy]
 
   # GET /users
@@ -27,7 +28,8 @@ class API::V1::UsersController < ApplicationController
     @user = User.new(user_params)
 
     if @user.save
-      render action: 'show', status: :created, location: @user 
+      sign_in @user, device_params
+      render @user
     else
       render json: @user.errors, status: :unprocessable_entity 
     end
@@ -58,6 +60,10 @@ class API::V1::UsersController < ApplicationController
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def user_params
-      params.require(:user).permit(:user_id, :password)
+      params.require(:user).permit(:email, :password)
+    end
+
+    def device_params
+      params.require(:user).permit(:device_id)
     end
 end

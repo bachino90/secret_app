@@ -1,19 +1,19 @@
-class API::V1::SecretsController < ApplicationController
-  before_action :load_user
+class API::V1::SecretsController < API::V1::ApiController
+  before_action :correct_user
   before_action :set_secret,  only: [:show, :edit, :update, :destroy]
 
   # GET /secrets
   # GET /secrets.json
   def index
-    @secrets = Secret.secretsIndex(@user,params[:about])
+    @secrets = Secret.secretsIndex(@current_user,params[:about],params[:page])
   end
 
   # GET /secrets/friends
   def friends
     if params[:about]
-      @secrets = Secret.all_in(user_id: @user.friends, about: params[:about])
+      @secrets = Secret.all_in(user_id: @current_user.friends, about: params[:about])
     else
-      @secrets = Secret.all_in(user_id: @user.friends)
+      @secrets = Secret.all_in(user_id: @current_user.friends)
     end
     render json: @secrets
   end
@@ -27,7 +27,7 @@ class API::V1::SecretsController < ApplicationController
 
   # GET /secrets/new
   def new
-    @secret = @user.secrets.build
+    @secret = @current_user.secrets.build
   end
 
   # GET /secrets/1/edit
@@ -37,23 +37,23 @@ class API::V1::SecretsController < ApplicationController
   # POST /secrets
   # POST /secrets.json
   def create
-    @secret = @user.secrets.build(secret_params)#Secret.new(secret_params)
+    @secret = @current_user.secrets.build(secret_params)#Secret.new(secret_params)
 
-      if @secret.save
-        render json: @secret, callbacks: "show" 
-      else
-        render json: @secret.errors, status: :unprocessable_entity
-      end
+    if @secret.save
+      render json: @secret
+    else
+      render json: @secret.errors, status: :unprocessable_entity
+    end
   end
 
   # PATCH/PUT /secrets/1
   # PATCH/PUT /secrets/1.json
   def update
-      if @secret.update_attributes(secret_params)
-        head :no_content
-      else
-        render json: @secret.errors, status: :unprocessable_entity
-      end
+    if @secret.update_attributes(secret_params)
+      head :no_content
+    else
+      render json: @secret.errors, status: :unprocessable_entity
+    end
   end
 
   # DELETE /secrets/1
@@ -66,8 +66,8 @@ class API::V1::SecretsController < ApplicationController
   #PUT /secrets/1/like
   def like
     @secret = Secret.find(params[:secret_id])
-    if !@secret.likes.include?(@user.id.to_s)
-      @secret.likes.push(@user.id.to_s)
+    if !@secret.likes.include?(@current_user.id.to_s)
+      @secret.likes.push(@current_user.id.to_s)
       @secret.likes_count = @secret.likes.count
       if @secret.save
         head :no_content
@@ -80,8 +80,8 @@ class API::V1::SecretsController < ApplicationController
   #DELETE /secrets/1/like
   def unlike
     @secret = Secret.find(params[:secret_id])
-    if @secret.likes.include?(@user.id.to_s)
-      @secret.likes.delete(@user.id.to_s)
+    if @secret.likes.include?(@current_user.id.to_s)
+      @secret.likes.delete(@current_user.id.to_s)
       @secret.likes_count = @secret.likes.count
       if @secret.save
         head :no_content
@@ -102,7 +102,7 @@ class API::V1::SecretsController < ApplicationController
       params.require(:secret).permit(:content, :media_url, :about)
     end
 
-    def load_user
-      @user = User.find(params[:user_id])
+    def correct_user
+      return _not_authorized unless current_user && current_user.id.to_s == params[:user_id]
     end
 end

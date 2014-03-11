@@ -11,6 +11,7 @@ SecretApp::Application.routes.draw do
 
   namespace :api, :defaults => {:format => :json} do #,path => "", :constrains => {:subdomain => "api"}
     namespace :v1 do
+      resources :sessions, only: [:create, :destroy]
       resources :users do
         get 'secrets/friends', to: 'secrets#friends'
         resources :secrets do

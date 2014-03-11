@@ -1,19 +1,20 @@
-class API::V1::CommentsController < ApplicationController
-
-  before_action :load_user_secret
+class API::V1::CommentsController < API::V1::ApiController
+  before_action :correct_user
+  before_action :load_secret
   before_action :set_comment,  only: [:destroy]
 
   # GET /secrets
   # GET /secrets.json
   def index
-    @comments = @secret.comments.asc(:created_at)
-    @comments.each do |comment|
-      if @user.friends.include?(comment.user_id)
-        comment.author_is_friend = true
-      elsif comment.user_id == @user.id
-        comment.i_am_author = true
-      end
-    end
+    @comments = @secret.commentsIndex(@current_user)
+    #@comments = @secret.comments.asc(:created_at)
+    #@comments.each do |comment|
+    #  if @user.friends.include?(comment.user_id)
+    #    comment.author_is_friend = true
+    #  elsif comment.user_id == @user.id
+    #    comment.i_am_author = true
+    #  end
+    #end
   end
 
   # GET /secrets/new
@@ -25,9 +26,10 @@ class API::V1::CommentsController < ApplicationController
   # POST /secrets.json
   def create
     @comment = @secret.comments.build(comment_params)
-    @comment.user_id = @user.id
+    @comment.user_id = @current_user.id
     if @comment.save
-      render action: 'show', status: :created, location: @comment
+      comment = CommentModel.new(@comment, @current_user)
+      render json: comment
     else
       render json: @comment.errors, status: :unprocessable_entity
     end
@@ -51,8 +53,12 @@ class API::V1::CommentsController < ApplicationController
       params.require(:comment).permit(:content)
     end
 
-    def load_user_secret
-      @user = User.find(params[:user_id])
+    def load_secret
+      #@user = User.find(params[:user_id])
       @secret = Secret.find(params[:secret_id])
+    end
+
+    def correct_user
+      return _not_authorized unless @current_user.id.to_s == params[:user_id]
     end
 end

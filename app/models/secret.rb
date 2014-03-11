@@ -36,8 +36,6 @@ class SecretModel
   end
 end
 
-
-
 class Secret
   include Mongoid::Document
   include Mongoid::Timestamps
@@ -46,10 +44,9 @@ class Secret
   field :media_url, type: String, default: ""
   field :about, type: String, default: "00"
   field :likes, type: Array, default: []
-
+  field :likes_count, type: Integer, default: 0
   #field :comments_count, type: Integer, default: 0
   #field :friends_comments_count, type: Integer, default: 0
-  field :likes_count, type: Integer, default: 0
   #field :friends_likes_count, type: Integer, default: 0
 
   #field :author_is_friend, type: Boolean, default: false
@@ -57,15 +54,19 @@ class Secret
   #field :i_like_it, type:Boolean, default: false
 
 	belongs_to :user, inverse_of: :secrets #index: true
-  embeds_many :comments
+  embeds_many :comments, after_add: :create_notification
 
   #index ({about: 1}, {name: "about_index"})
 
-  def self.secretsIndex(user,about)
+  def create_notification(comment) 
+
+  end
+
+  def self.secretsIndex(user,about,p=1)
     if about && about != '00' && about != ''
-      secrets = Secret.all_in(about: about).desc(:created_at)
+      secrets = Secret.all_in(about: about).desc(:created_at).paginate(:page => p, :per_page => 10)
     else
-      secrets = Secret.all.desc(:created_at)
+      secrets = Secret.all.desc(:created_at).paginate(:page => p, :per_page => 10)
     end
     secretsModel = Array.new(secrets.count)
     secrets.each_with_index do |s, i|
@@ -82,6 +83,19 @@ class Secret
     end
 
     return secretsModel
+  end
+
+  def commentsIndex(user,p=1)
+    comments = self.comments.asc(:created_at).paginate(:page => p, :per_page => 20)
+    commentsModel = Array.new(comments.count)
+    comments.each_with_index do |c, i|
+      #if user.friends.include?(comment.user_id)
+      #  comment.author_is_friend = true
+      #elsif comment.user_id == @user.id
+      #  comment.i_am_author = true
+      #end
+      commentsModel[i] = CommentModel.new(c, user)
+    end
   end
 
 end
