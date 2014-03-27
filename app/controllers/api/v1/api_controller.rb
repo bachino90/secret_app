@@ -7,7 +7,7 @@ class API::V1::ApiController < ApplicationController
   # For APIs, you may want to use :null_session instead.
   protect_from_forgery with: :null_session
 
-  private
+  protected
 
     def signed_in
       !!current_api_session_token.user
@@ -22,11 +22,11 @@ class API::V1::ApiController < ApplicationController
     end
 
     def current_api_session_token
-      @current_api_session_token ||= ApiSessionToken.new(_authorization_header)
+      return @current_api_session_token ||= ApiSessionToken.new(_authorization_header)
     end
 
     def _authorization_header
-      request.headers['HTTP_AUTHORIZATION']
+      auth_header = request.authorization #headers['HTTP_AUTHORIZATION']
     end
 
     def _not_authorized message = "Not Authorized"

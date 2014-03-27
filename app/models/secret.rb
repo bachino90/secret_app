@@ -40,6 +40,8 @@ class Secret
   include Mongoid::Document
   include Mongoid::Timestamps
 
+  LIMIT = 5
+
   field :content, type: String
   field :media_url, type: String, default: ""
   field :about, type: String, default: "00"
@@ -54,35 +56,30 @@ class Secret
   #field :i_like_it, type:Boolean, default: false
 
 	belongs_to :user, inverse_of: :secrets #index: true
-  embeds_many :comments, after_add: :create_notification
+  embeds_many :comments#, after_add: :create_notification
+
+  validates :content, length: { minimum: 1 }
 
   #index ({about: 1}, {name: "about_index"})
 
-  def create_notification(comment) 
-
+  def self.recentSecrets(user, about, recent_update_at)
+    recent_date = DateTime.parse(recent_update_at)
+    if about && about != '00' && about != ''
+      secrets = Secret.all_in(about: about).where(:created_at.gt => recent_date).desc(:created_at).limit(LIMIT)
+    else
+      secrets = Secret.all.where(:created_at.gt => recent_date).desc(:created_at).limit(LIMIT)
+    end
+    return Secret.convert_to_secret_model(secrets, user)
   end
 
-  def self.secretsIndex(user,about,p=1)
+  def self.lastSecrets(user, about, last_update_at)
+    last_date = DateTime.parse(last_update_at)
     if about && about != '00' && about != ''
-      secrets = Secret.all_in(about: about).desc(:created_at).paginate(:page => p, :per_page => 10)
+      secrets = Secret.all_in(about: about).where(:created_at.lt => last_date).desc(:created_at).limit(LIMIT)
     else
-      secrets = Secret.all.desc(:created_at).paginate(:page => p, :per_page => 10)
+      secrets = Secret.all.where(:created_at.lt => last_date).desc(:created_at).limit(LIMIT)
     end
-    secretsModel = Array.new(secrets.count)
-    secrets.each_with_index do |s, i|
-      #s.comments_count = s.comments.count
-      #if user.friends.include?(s.user_id.to_s)
-      #  s.author_is_friend = true
-      #elsif s.user_id.to_s == user.id.to_s
-      #  s.i_am_author = true
-      #end
-      #if s.likes.include?(user.id.to_s)
-      #  s.i_like_it = true
-      #end
-      secretsModel[i] = SecretModel.new(s, user)
-    end
-
-    return secretsModel
+    return Secret.convert_to_secret_model(secrets, user)
   end
 
   def commentsIndex(user,p=1)
@@ -97,5 +94,45 @@ class Secret
       commentsModel[i] = CommentModel.new(c, user)
     end
   end
+
+  def recentComments(user,p=1)
+    comments = self.comments.asc(:created_at.gt => recent_date).limit(LIMIT)
+    if comments.count < LIMIT
+      commentsModel = Array.new(comments.count)
+    else 
+      commentsModel = Array.new(LIMIT)
+    end
+    comments.each_with_index do |c, i|
+      #if user.friends.include?(comment.user_id)
+      #  comment.author_is_friend = true
+      #elsif comment.user_id == @user.id
+      #  comment.i_am_author = true
+      #end
+      commentsModel[i] = CommentModel.new(c, user)
+    end
+  end
+
+  private
+
+    def self.convert_to_secret_model(secrets, user)
+      if secrets.count < LIMIT
+        secretsModel = Array.new(secrets.count)
+      else 
+        secretsModel = Array.new(LIMIT)
+      end
+      secrets.each_with_index do |s, i|
+        #s.comments_count = s.comments.count
+        #if user.friends.include?(s.user_id.to_s)
+        #  s.author_is_friend = true
+        #elsif s.user_id.to_s == user.id.to_s
+        #  s.i_am_author = true
+        #end
+        #if s.likes.include?(user.id.to_s)
+        #  s.i_like_it = true
+        #end
+        secretsModel[i] = SecretModel.new(s, user)
+      end
+      return secretsModel
+    end
 
 end

@@ -8,6 +8,9 @@ gem 'will_paginate_mongoid'
 
 gem 'redis'
 gem 'hiredis'
+gem 'em-synchrony'
+
+gem 'debugger'
 
 # Use SCSS for stylesheets
 gem 'sass-rails', '~> 4.0.0'

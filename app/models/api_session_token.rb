@@ -1,11 +1,3 @@
-class ApiSessionTokenResponse
-  def initialize(token, user_id)
-    @token = token
-    @user_id = user_id
-  end
-end
-
-
 class ApiSessionToken
 
 	def initialize(existing_token=nil, redis=_redis_connection)
@@ -18,7 +10,7 @@ class ApiSessionToken
 	end
 
 	def user
-    return unless valid?
+    #return unless valid?
     @user ||= _retrieve_user
   end
 
@@ -68,7 +60,7 @@ class ApiSessionToken
   	end
 
   	def _user_id_key
-    	"session_token/#{@token}/user_id"
+    	"session_token/#{token}/user_id"
   	end
 
   	def _redis_connection
@@ -76,6 +68,13 @@ class ApiSessionToken
     	opts[:driver] = :hiredis
     	Redis.new opts
   	end
+end
+
+class ApiSessionTokenResponse
+  def initialize(token, user_id)
+    @token = token
+    @user_id = user_id.to_s
+  end
 end
 
 

@@ -5,15 +5,21 @@ class API::V1::SecretsController < API::V1::ApiController
   # GET /secrets
   # GET /secrets.json
   def index
-    @secrets = Secret.secretsIndex(@current_user,params[:about],params[:page])
+    @secrets = Secret.recentSecrets(current_user, params[:about], params[:recent_update_at])#Secret.secretsIndex(current_user,params[:about],params[:page])
+  end
+
+  # GET /secrets/last
+  def last
+    @secrets = Secret.lastSecrets(current_user, params[:about], params[:last_update_at])
+    render json: @secrets
   end
 
   # GET /secrets/friends
   def friends
     if params[:about]
-      @secrets = Secret.all_in(user_id: @current_user.friends, about: params[:about])
+      @secrets = Secret.all_in(user_id: current_user.friends, about: params[:about])
     else
-      @secrets = Secret.all_in(user_id: @current_user.friends)
+      @secrets = Secret.all_in(user_id: current_user.friends)
     end
     render json: @secrets
   end
@@ -27,7 +33,7 @@ class API::V1::SecretsController < API::V1::ApiController
 
   # GET /secrets/new
   def new
-    @secret = @current_user.secrets.build
+    @secret = current_user.secrets.build
   end
 
   # GET /secrets/1/edit
@@ -37,7 +43,7 @@ class API::V1::SecretsController < API::V1::ApiController
   # POST /secrets
   # POST /secrets.json
   def create
-    @secret = @current_user.secrets.build(secret_params)#Secret.new(secret_params)
+    @secret = current_user.secrets.build(secret_params)#Secret.new(secret_params)
 
     if @secret.save
       render json: @secret
@@ -66,10 +72,11 @@ class API::V1::SecretsController < API::V1::ApiController
   #PUT /secrets/1/like
   def like
     @secret = Secret.find(params[:secret_id])
-    if !@secret.likes.include?(@current_user.id.to_s)
-      @secret.likes.push(@current_user.id.to_s)
+    if !@secret.likes.include?(current_user.id.to_s)
+      @secret.likes.push(current_user.id.to_s)
       @secret.likes_count = @secret.likes.count
       if @secret.save
+        create_notification(@secret)
         head :no_content
       else
         render json: @secret.errors, status: :unprocessable_entity
@@ -80,8 +87,8 @@ class API::V1::SecretsController < API::V1::ApiController
   #DELETE /secrets/1/like
   def unlike
     @secret = Secret.find(params[:secret_id])
-    if @secret.likes.include?(@current_user.id.to_s)
-      @secret.likes.delete(@current_user.id.to_s)
+    if @secret.likes.include?(current_user.id.to_s)
+      @secret.likes.delete(current_user.id.to_s)
       @secret.likes_count = @secret.likes.count
       if @secret.save
         head :no_content
@@ -104,5 +111,13 @@ class API::V1::SecretsController < API::V1::ApiController
 
     def correct_user
       return _not_authorized unless current_user && current_user.id.to_s == params[:user_id]
+    end
+
+    def create_notification(secret)
+      secret_author = secret.user
+      if secret_author.id.to_s != current_user.id.to_s
+        noti = secret_author.notifications.build(is_like: true, secret_id: secret.id.to_s)
+        noti.save!
+      end
     end
 end

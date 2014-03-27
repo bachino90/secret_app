@@ -42,4 +42,17 @@ class Comment
   field :i_am_author, type: Boolean, default: false
   
   embedded_in :secret, inverse_of: :comments
+
+  validates :content, length: { minimum: 1 }
+
+  after_save :create_notification
+
+  def create_notification
+    secret_author = self.secret.user
+    if secret_author.id.to_s != self.user_id.to_s
+      noti = secret_author.notifications.build(is_comment: true, secret_id: self.secret.id.to_s)
+      noti.save!
+    end
+  end
+
 end

@@ -26,10 +26,15 @@ class API::V1::UsersController < API::V1::ApiController
   # POST /users.json
   def create
     @user = User.new(user_params)
-
     if @user.save
-      sign_in @user, device_params
-      render @user
+      token = ApiSessionToken.new#current_api_session_token
+      @user.devices.build(device_id: params[:device_id], remember_token: token.token)
+      if @user.save!
+        token.user = @user 
+        render json: token.response
+      else
+        _error 'Session dont save', 404
+      end
     else
       render json: @user.errors, status: :unprocessable_entity 
     end
@@ -38,11 +43,6 @@ class API::V1::UsersController < API::V1::ApiController
   # PATCH/PUT /users/1
   # PATCH/PUT /users/1.json
   def update
-    if @user.update(user_params)
-      head :no_content
-    else
-      render json: @user.errors, status: :unprocessable_entity
-    end
   end
 
   # DELETE /users/1
@@ -50,6 +50,11 @@ class API::V1::UsersController < API::V1::ApiController
   def destroy
     @user.destroy
     head :no_content
+  end
+
+  # GET /users/notifications
+  def notifications
+    render json: current_user.notifications
   end
 
   private
@@ -60,7 +65,7 @@ class API::V1::UsersController < API::V1::ApiController
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def user_params
-      params.require(:user).permit(:email, :password)
+      params.require(:user).permit(:email, :password, :password_confirmation)
     end
 
     def device_params

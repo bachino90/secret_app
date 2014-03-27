@@ -12,8 +12,10 @@ SecretApp::Application.routes.draw do
   namespace :api, :defaults => {:format => :json} do #,path => "", :constrains => {:subdomain => "api"}
     namespace :v1 do
       resources :sessions, only: [:create, :destroy]
+      match '/signout',   to: 'sessions#destroy',   via: 'delete'
       resources :users do
-        get 'secrets/friends', to: 'secrets#friends'
+        get   'notifications'
+        get   'secrets/last', to: 'secrets#last'
         resources :secrets do
           put     'like'
           delete  'like', to: 'secrets#unlike'

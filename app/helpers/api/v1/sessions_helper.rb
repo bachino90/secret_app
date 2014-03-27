@@ -4,7 +4,7 @@ module API::V1::SessionsHelper
 	module_function
 
 	def authenticate_with_password(user, attempt)
-		user && user.password == attempt #BCrypt:Password.new(user.password) == attempt
+		user && user.authenticate(attempt) 
 	end
 
 	def authenticate_with_password!(*args)

@@ -6,7 +6,7 @@ class API::V1::CommentsController < API::V1::ApiController
   # GET /secrets
   # GET /secrets.json
   def index
-    @comments = @secret.commentsIndex(@current_user)
+    @comments = @secret.commentsIndex(current_user)
     #@comments = @secret.comments.asc(:created_at)
     #@comments.each do |comment|
     #  if @user.friends.include?(comment.user_id)
@@ -26,9 +26,9 @@ class API::V1::CommentsController < API::V1::ApiController
   # POST /secrets.json
   def create
     @comment = @secret.comments.build(comment_params)
-    @comment.user_id = @current_user.id
+    @comment.user_id = current_user.id.to_s
     if @comment.save
-      comment = CommentModel.new(@comment, @current_user)
+      comment = CommentModel.new(@comment, current_user)
       render json: comment
     else
       render json: @comment.errors, status: :unprocessable_entity
@@ -59,6 +59,6 @@ class API::V1::CommentsController < API::V1::ApiController
     end
 
     def correct_user
-      return _not_authorized unless @current_user.id.to_s == params[:user_id]
+      return _not_authorized unless current_user.id.to_s == params[:user_id]
     end
 end
